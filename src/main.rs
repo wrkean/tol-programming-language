@@ -5,9 +5,11 @@ use std::{fs, path::PathBuf};
 
 use crate::{lexer::Lexer, module::Module};
 
+mod ast;
 mod diagnostic;
 mod lexer;
 mod module;
+mod parser;
 mod prelude;
 mod token;
 

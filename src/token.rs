@@ -1,5 +1,6 @@
 use crate::prelude::Span;
 
+#[derive(Clone)]
 pub struct Token {
     lexeme: String,
     kind: TokenKind,
@@ -66,4 +67,26 @@ impl TokenKind {
             RParen | RSquare | Identifier | IntLiteral | FloatLiteral
         )
     }
+
+    pub fn precedence(&self) -> u8 {
+        match self {
+            TokenKind::Plus | TokenKind::Minus => 1,
+            TokenKind::Star | TokenKind::Slash => 2,
+            _ => 0,
+        }
+    }
+
+    pub fn assoc(&self) -> Associativity {
+        match self {
+            TokenKind::Plus | TokenKind::Minus | TokenKind::Star | TokenKind::Slash => {
+                Associativity::Left
+            }
+            _ => Associativity::Right,
+        }
+    }
+}
+
+pub enum Associativity {
+    Left,
+    Right,
 }

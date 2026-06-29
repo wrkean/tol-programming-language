@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{mem, sync::Arc};
 
 use crate::{diagnostic::TolDiagnostic, token::Token};
 
@@ -18,6 +18,31 @@ impl Module {
 
     pub fn set_diagnostics(&mut self, diagnostics: Vec<TolDiagnostic>) {
         self.diagnostics = Some(diagnostics)
+    }
+
+    pub fn add_diagnostic(&mut self, diagnostic: TolDiagnostic) {
+        self.diagnostics
+            .as_mut()
+            .expect("diagnostics not set, this is a compiler bug")
+            .push(diagnostic);
+    }
+
+    pub fn report_diagnostics(&mut self) {
+        let diagnostics = mem::take(
+            self.diagnostics
+                .as_mut()
+                .expect("diagnostics not set, this is a compiler bug"),
+        );
+
+        for diag in diagnostics.into_iter() {
+            eprintln!(
+                "{:?}",
+                miette::Report::with_source_code(
+                    miette::Report::new(diag),
+                    Arc::clone(&self.source_code)
+                )
+            )
+        }
     }
 
     pub fn source_code(&self) -> &str {
