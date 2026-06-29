@@ -13,7 +13,7 @@ pub struct Lexer<'src> {
     start: usize,
     current: usize,
     bracket_depth: u8,
-    tokens: Vec<Token<'src>>,
+    tokens: Vec<Token>,
     keywords: HashMap<&'static str, TokenKind>,
     diagnostics: Vec<TolDiagnostic>,
 }
@@ -40,7 +40,7 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    pub fn run(&mut self) -> Vec<Token<'src>> {
+    pub fn run(&mut self) -> Vec<Token> {
         while self.peek().is_some() {
             self.start = self.current;
             self.lex_token();
@@ -175,11 +175,11 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    fn add_token(&mut self, kind: TokenKind, lexeme: Option<&'src str>) {
+    fn add_token(&mut self, kind: TokenKind, lexeme: Option<&str>) {
         let tok = match lexeme {
-            Some(s) => Token::new(s, kind, self.span()),
+            Some(s) => Token::new(s.to_string(), kind, self.span()),
             None => {
-                let lexeme = &self.source[self.span()];
+                let lexeme = self.source[self.span()].to_string();
                 Token::new(lexeme, kind, self.span())
             }
         };
@@ -222,13 +222,13 @@ impl<'src> Lexer<'src> {
 mod tests {
     use super::*;
 
-    fn lex(source: &str) -> Vec<Token<'_>> {
+    fn lex(source: &str) -> Vec<Token> {
         let mut lexer = Lexer::new(source);
         lexer.run();
         lexer.tokens
     }
 
-    fn kinds(tokens: &[Token<'_>]) -> Vec<TokenKind> {
+    fn kinds(tokens: &[Token]) -> Vec<TokenKind> {
         tokens.iter().map(|tok| tok.kind().clone()).collect()
     }
 

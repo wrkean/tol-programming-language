@@ -1,13 +1,13 @@
 use crate::prelude::Span;
 
-pub struct Token<'src> {
-    lexeme: &'src str,
+pub struct Token {
+    lexeme: String,
     kind: TokenKind,
     span: Span,
 }
 
-impl<'src> Token<'src> {
-    pub fn new(lexeme: &'src str, kind: TokenKind, span: Span) -> Self {
+impl Token {
+    pub fn new(lexeme: String, kind: TokenKind, span: Span) -> Self {
         Self { lexeme, kind, span }
     }
 
@@ -15,8 +15,8 @@ impl<'src> Token<'src> {
         &self.kind
     }
 
-    pub fn lexeme(&self) -> &'src str {
-        self.lexeme
+    pub fn lexeme(&self) -> &str {
+        &self.lexeme
     }
 
     pub fn span(&self) -> &Span {
