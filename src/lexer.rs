@@ -217,3 +217,148 @@ impl<'src> Lexer<'src> {
         ch
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lex(source: &str) -> Vec<Token<'_>> {
+        let mut lexer = Lexer::new(source);
+        lexer.run();
+        lexer.tokens
+    }
+
+    fn kinds(tokens: &[Token<'_>]) -> Vec<TokenKind> {
+        tokens.iter().map(|tok| tok.kind().clone()).collect()
+    }
+
+    #[test]
+    fn lexes_keywords_and_basic_punctuation() {
+        let tokens = lex("par kung kungdi kungwala ibalik ( ) [ ] { } : ;");
+
+        assert_eq!(
+            kinds(&tokens),
+            vec![
+                TokenKind::Par,
+                TokenKind::Kung,
+                TokenKind::Kungdi,
+                TokenKind::Kungwala,
+                TokenKind::Ibalik,
+                TokenKind::LParen,
+                TokenKind::RParen,
+                TokenKind::LSquare,
+                TokenKind::RSquare,
+                TokenKind::LBrace,
+                TokenKind::RBrace,
+                TokenKind::Colon,
+                TokenKind::Semicolon,
+                TokenKind::Eof,
+            ]
+        );
+    }
+
+    #[test]
+    fn lexes_identifiers_and_numbers() {
+        let tokens = lex("foo _bar baz123 1 42 1_000 12.5 3_000.25");
+
+        assert_eq!(
+            kinds(&tokens),
+            vec![
+                TokenKind::Identifier,
+                TokenKind::Identifier,
+                TokenKind::Identifier,
+                TokenKind::IntLiteral,
+                TokenKind::IntLiteral,
+                TokenKind::IntLiteral,
+                TokenKind::FloatLiteral,
+                TokenKind::FloatLiteral,
+                TokenKind::Eof,
+            ]
+        );
+        assert_eq!(tokens[0].lexeme(), "foo");
+        assert_eq!(tokens[3].lexeme(), "1");
+        assert_eq!(tokens[6].lexeme(), "12.5");
+        assert_eq!(tokens[7].lexeme(), "3_000.25");
+    }
+
+    #[test]
+    fn infers_semicolons_at_newlines_outside_brackets() {
+        let tokens = lex("foo\nbar\n1\n");
+
+        assert_eq!(
+            kinds(&tokens),
+            vec![
+                TokenKind::Identifier,
+                TokenKind::Semicolon,
+                TokenKind::Identifier,
+                TokenKind::Semicolon,
+                TokenKind::IntLiteral,
+                TokenKind::Semicolon,
+                TokenKind::Eof,
+            ]
+        );
+        assert_eq!(tokens[1].lexeme(), ";");
+        assert_eq!(tokens[1].span(), &(3..4));
+    }
+
+    #[test]
+    fn does_not_infer_semicolons_inside_parentheses_or_square_brackets() {
+        let tokens = lex("(foo\nbar)\n[baz\nqux]\n");
+
+        assert_eq!(
+            kinds(&tokens),
+            vec![
+                TokenKind::LParen,
+                TokenKind::Identifier,
+                TokenKind::Identifier,
+                TokenKind::RParen,
+                TokenKind::Semicolon,
+                TokenKind::LSquare,
+                TokenKind::Identifier,
+                TokenKind::Identifier,
+                TokenKind::RSquare,
+                TokenKind::Semicolon,
+                TokenKind::Eof,
+            ]
+        );
+    }
+
+    #[test]
+    fn skips_line_comments_until_newline() {
+        let tokens = lex("foo -- comment\nbar");
+
+        assert_eq!(
+            kinds(&tokens),
+            vec![
+                TokenKind::Identifier,
+                TokenKind::Semicolon,
+                TokenKind::Identifier,
+                TokenKind::Eof,
+            ]
+        );
+        assert_eq!(tokens[0].lexeme(), "foo");
+        assert_eq!(tokens[2].lexeme(), "bar");
+    }
+
+    #[test]
+    fn lexes_comparison_and_equality_operators() {
+        let tokens = lex("< <= > >= = == + - * /");
+
+        assert_eq!(
+            kinds(&tokens),
+            vec![
+                TokenKind::Lesser,
+                TokenKind::LesserEq,
+                TokenKind::Greater,
+                TokenKind::GreaterEq,
+                TokenKind::Equal,
+                TokenKind::EqualEq,
+                TokenKind::Plus,
+                TokenKind::Minus,
+                TokenKind::Star,
+                TokenKind::Slash,
+                TokenKind::Eof,
+            ]
+        );
+    }
+}

@@ -24,7 +24,7 @@ impl<'src> Token<'src> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     Par,
     Kung,
