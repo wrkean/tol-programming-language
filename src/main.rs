@@ -3,6 +3,10 @@
 use clap::Parser;
 use std::path::PathBuf;
 
+mod lexer;
+mod prelude;
+mod token;
+
 fn main() {
     let args = Args::parse();
 }
