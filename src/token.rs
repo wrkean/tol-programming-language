@@ -10,8 +10,13 @@ impl<'src> Token<'src> {
     pub fn new(lexeme: &'src str, kind: TokenKind, span: Span) -> Self {
         Self { lexeme, kind, span }
     }
+
+    pub fn kind(&self) -> &TokenKind {
+        &self.kind
+    }
 }
 
+#[derive(Clone)]
 pub enum TokenKind {
     Par,
     Kung,
@@ -39,6 +44,18 @@ pub enum TokenKind {
     Slash,
 
     Identifier,
+    IntLiteral,
+    FloatLiteral,
 
     Eof,
+}
+
+impl TokenKind {
+    pub fn infers_semicolon(&self) -> bool {
+        use TokenKind::*;
+        matches!(
+            self,
+            RParen | RSquare | Identifier | IntLiteral | FloatLiteral
+        )
+    }
 }
