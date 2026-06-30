@@ -17,8 +17,8 @@ impl Expr {
         &self.span
     }
 
-    pub fn pretty(&self) -> String {
-        self.to_string()
+    pub fn kind(&self) -> &ExprKind {
+        &self.kind
     }
 }
 
@@ -34,6 +34,7 @@ pub enum ExprKind {
     },
 }
 
+// ============= USED FOR TESTS ONLY =============
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.kind.fmt(f)

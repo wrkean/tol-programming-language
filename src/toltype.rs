@@ -3,6 +3,7 @@ use crate::{
     prelude::{Span, TolResult},
 };
 
+#[derive(Debug)]
 pub enum TolType {
     Numero,
     Lutang,

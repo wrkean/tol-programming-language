@@ -212,7 +212,7 @@ mod tests {
         let mut parser = parser_for(tokens);
         let expr = parser.parse_expression(0).unwrap();
 
-        assert_eq!(expr.pretty(), "(1 + (2 * 3))");
+        assert_eq!(expr.to_string(), "(1 + (2 * 3))");
         assert_eq!(expr.span(), &(0..9));
     }
 
@@ -230,7 +230,7 @@ mod tests {
         let mut parser = parser_for(tokens);
         let expr = parser.parse_expression(0).unwrap();
 
-        assert_eq!(expr.pretty(), "(1 + 2)");
+        assert_eq!(expr.to_string(), "(1 + 2)");
         assert_eq!(expr.span(), &(1..6));
     }
 

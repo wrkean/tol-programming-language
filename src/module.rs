@@ -1,6 +1,10 @@
 use std::{mem, sync::Arc};
 
-use crate::{ast::stmt::Stmt, diagnostic::TolDiagnostic, token::Token};
+use crate::{
+    ast::{pretty_printer::ASTPrettyPrinter, stmt::Stmt},
+    diagnostic::TolDiagnostic,
+    token::Token,
+};
 
 pub struct Module {
     source_code: Arc<str>,
@@ -51,9 +55,8 @@ impl Module {
     }
 
     pub fn display_ast(&self) {
-        for statement in self.ast.iter() {
-            println!("{}", statement.pretty());
-        }
+        let mut pretty_printer = ASTPrettyPrinter::new(&self.ast, 4);
+        pretty_printer.run();
     }
 
     pub fn source_code(&self) -> &str {
