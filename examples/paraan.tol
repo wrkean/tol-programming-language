@@ -1,4 +1,5 @@
-par paraan(n: numero, x: par) numero {
+par paraan(n: numero, x: numero) numero {
+    ang x: numero = 2
     ang x: numero = 2
     ang y = 1
 }
