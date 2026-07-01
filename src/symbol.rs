@@ -1,5 +1,6 @@
 use crate::{prelude::Span, toltype::TolType};
 
+#[derive(Debug)]
 pub struct Symbol {
     name: String,
     kind: SymbolKind,
@@ -56,6 +57,16 @@ impl Symbol {
         }
     }
 
+    pub fn set_type(&mut self, ty: TolType) {
+        match &mut self.kind {
+            SymbolKind::Name { declared_type, .. } => *declared_type = Some(ty),
+            SymbolKind::Function {
+                declared_return_type,
+                ..
+            } => *declared_return_type = ty,
+        }
+    }
+
     pub fn declared_span(&self) -> &Span {
         &self.declared_span
     }
@@ -65,6 +76,7 @@ impl Symbol {
     }
 }
 
+#[derive(Debug)]
 pub enum SymbolKind {
     /// Name declaration
     Name {

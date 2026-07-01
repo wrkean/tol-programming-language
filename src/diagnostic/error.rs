@@ -88,4 +88,15 @@ pub enum TolError {
         #[label("Hindi ito isang l-value")]
         span: SourceSpan,
     },
+
+    #[error(r#"Hindi pwedeng "i-assign" ang `{rhs_ty_str}` sa `{lhs_ty_str}` "#)]
+    InvalidAssignment {
+        lhs_ty_str: String,
+        rhs_ty_str: String,
+
+        #[label(
+            r#"Ito ay may tipong `{rhs_ty_str}`, hindi ito pwede "i-assign" sa `{lhs_ty_str}`"#
+        )]
+        rhs_span: SourceSpan,
+    },
 }

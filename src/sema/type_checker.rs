@@ -33,11 +33,13 @@ impl<'sema> TypeChecker<'sema> {
         let mut ast = self.modul.take_ast();
 
         for statement in ast.iter() {
-            self.type_check_statement(statement);
+            if let Err(diag) = self.type_check_statement(statement) {
+                self.modul.add_diagnostic(diag);
+            };
         }
     }
 
-    fn type_check_statement(&mut self, statement: &Stmt) {
+    fn type_check_statement(&mut self, statement: &Stmt) -> TolResult<()> {
         match statement.kind() {
             StmtKind::NameDeclaration {
                 is_mutable,
@@ -55,7 +57,7 @@ impl<'sema> TypeChecker<'sema> {
         }
     }
 
-    fn type_check_name_declaration(&mut self, statement: &Stmt) {
+    fn type_check_name_declaration(&mut self, statement: &Stmt) -> TolResult<()> {
         let StmtKind::NameDeclaration {
             is_mutable,
             name,
@@ -66,7 +68,26 @@ impl<'sema> TypeChecker<'sema> {
             unreachable!()
         };
 
-        let rhs_ty = self.infer_expression(rhs);
+        let rhs_ty = self.infer_expression(rhs)?;
+
+        match ty {
+            Some(t) => {
+                self.coerce(&rhs_ty, t).ok_or(TolDiagnostic::new_error(
+                    TolError::InvalidAssignment {
+                        lhs_ty_str: t.to_tol_str(),
+                        rhs_ty_str: rhs_ty.to_tol_str(),
+                        rhs_span: rhs.span().clone().into(),
+                    },
+                ))?;
+            }
+            None => {
+                let id = statement.symbol_id().unwrap();
+                let symbol = self.modul.get_symbol_mut(id).unwrap();
+                symbol.set_type(rhs_ty);
+            }
+        }
+
+        Ok(())
     }
 
     fn infer_expression(&mut self, expression: &Expr) -> TolResult<TolType> {
@@ -168,7 +189,7 @@ impl<'sema> TypeChecker<'sema> {
             return Ok(());
         }
 
-        if self.can_implicitly_convert(rhs_type, lhs_type) {
+        if self.coerce(rhs_type, lhs_type).is_some() {
             // Optionally insert an ImplicitCast node here.
             return Ok(());
         }
@@ -194,24 +215,26 @@ impl<'sema> TypeChecker<'sema> {
             return Ok(lhs_type.clone());
         }
 
-        match (lhs_type, rhs_type) {
-            (TolType::Numero, TolType::Lutang) | (TolType::Lutang, TolType::Numero) => {
-                Ok(TolType::Lutang)
-            }
-            _ => Err(TolDiagnostic::new_error(TolError::InvalidOperandTypes {
+        self.coerce(lhs_type, rhs_type)
+            .ok_or(TolDiagnostic::new_error(TolError::InvalidOperandTypes {
                 lhs_ty_str: lhs_type.to_tol_str(),
                 rhs_ty_str: rhs_type.to_tol_str(),
                 operator: op.lexeme().to_string(),
                 lhs_span: lhs_span.into(),
                 rhs_span: rhs_span.into(),
-            })),
-        }
+            }))
     }
 
-    fn can_implicitly_convert(&self, from: &TolType, to: &TolType) -> bool {
-        matches!(
-            (from, to),
-            (TolType::Numero, TolType::Lutang) | (TolType::Lutang, TolType::Numero)
-        )
+    fn coerce(&self, from: &TolType, to: &TolType) -> Option<TolType> {
+        if from == to {
+            return Some(from.clone());
+        }
+
+        match (from, to) {
+            (TolType::Numero, TolType::Lutang) | (TolType::Lutang, TolType::Numero) => {
+                Some(TolType::Lutang)
+            }
+            _ => None,
+        }
     }
 }

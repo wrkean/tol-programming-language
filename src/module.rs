@@ -77,8 +77,12 @@ impl Module {
         self.symbol_table.len() - 1
     }
 
-    pub fn get_symbol(&mut self, id: usize) -> Option<&Symbol> {
+    pub fn get_symbol(&self, id: usize) -> Option<&Symbol> {
         self.symbol_table.get(id)
+    }
+
+    pub fn get_symbol_mut(&mut self, id: usize) -> Option<&mut Symbol> {
+        self.symbol_table.get_mut(id)
     }
 
     pub fn ast(&self) -> &[Stmt] {
@@ -91,5 +95,9 @@ impl Module {
 
     pub fn set_ast(&mut self, ast: Vec<Stmt>) {
         self.ast = ast;
+    }
+
+    pub fn __debug_symbol_table(&self) {
+        dbg!(&self.symbol_table);
     }
 }

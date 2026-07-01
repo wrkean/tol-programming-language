@@ -49,6 +49,7 @@ fn main() {
     semantic_analyzer.run();
 
     modul.report_diagnostics();
+    modul.__debug_symbol_table();
 }
 
 #[derive(clap::Parser)]
