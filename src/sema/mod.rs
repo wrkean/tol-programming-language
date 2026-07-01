@@ -8,15 +8,13 @@ pub mod analyzer_ctx;
 pub mod name_resolver;
 
 pub struct SemanticAnalyzer<'m> {
-    ast: Vec<Stmt>,
     analyzer_ctx: AnalyzerCtx,
     modul: &'m mut Module,
 }
 
 impl<'m> SemanticAnalyzer<'m> {
-    pub fn new(ast: Vec<Stmt>, modul: &'m mut Module) -> Self {
+    pub fn new(modul: &'m mut Module) -> Self {
         Self {
-            ast,
             analyzer_ctx: AnalyzerCtx::new(),
             modul,
         }
@@ -27,7 +25,7 @@ impl<'m> SemanticAnalyzer<'m> {
     }
 
     fn resolve_names(&mut self) {
-        let mut resolver = NameResolver::new(&self.ast, &mut self.analyzer_ctx, self.modul);
+        let mut resolver = NameResolver::new(&mut self.analyzer_ctx, self.modul);
         resolver.run();
     }
 }

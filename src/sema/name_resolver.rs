@@ -12,30 +12,27 @@ use crate::{
 };
 
 pub struct NameResolver<'sema> {
-    ast: &'sema [Stmt],
     analyzer_ctx: &'sema mut AnalyzerCtx,
     modul: &'sema mut Module,
 }
 
 impl<'sema> NameResolver<'sema> {
-    pub fn new(
-        ast: &'sema [Stmt],
-        analyzer_ctx: &'sema mut AnalyzerCtx,
-        modul: &'sema mut Module,
-    ) -> Self {
+    pub fn new(analyzer_ctx: &'sema mut AnalyzerCtx, modul: &'sema mut Module) -> Self {
         Self {
-            ast,
             analyzer_ctx,
             modul,
         }
     }
 
     pub fn run(&mut self) {
-        for statement in self.ast.iter() {
+        let ast = self.modul.take_ast(); // Temporary ownership
+        for statement in ast.iter() {
             if let Err(diag) = self.resolve_statement(statement) {
                 self.modul.add_diagnostic(diag);
             };
         }
+
+        self.modul.set_ast(ast);
     }
 
     fn resolve_statement(&mut self, statement: &Stmt) -> TolResult<()> {

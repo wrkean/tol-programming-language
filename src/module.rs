@@ -79,4 +79,16 @@ impl Module {
     pub fn get_symbol(&mut self, id: usize) -> Option<&Symbol> {
         self.symbol_table.get(id)
     }
+
+    pub fn ast(&self) -> &[Stmt] {
+        &self.ast
+    }
+
+    pub fn take_ast(&mut self) -> Vec<Stmt> {
+        mem::take(&mut self.ast)
+    }
+
+    pub fn set_ast(&mut self, ast: Vec<Stmt>) {
+        self.ast = ast;
+    }
 }

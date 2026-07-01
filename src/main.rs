@@ -2,7 +2,7 @@
 
 use std::{fs, path::PathBuf};
 
-use crate::{lexer::Lexer, module::Module, parser::Parser};
+use crate::{lexer::Lexer, module::Module, parser::Parser, sema::SemanticAnalyzer};
 
 mod ast;
 mod diagnostic;
@@ -23,9 +23,9 @@ fn main() {
         fs::read_to_string(args.input).unwrap()
     };
 
-    let mut module = Module::new(source_code);
+    let mut modul = Module::new(source_code);
 
-    let source_code2 = module.source_code_arc();
+    let source_code2 = modul.source_code_arc();
     let mut lexer = Lexer::new(&source_code2);
     let tokens = lexer.run();
 
@@ -39,13 +39,16 @@ fn main() {
         )
     }
 
-    lexer.transfer_diagnostics(&mut module);
+    lexer.transfer_diagnostics(&mut modul);
 
-    let mut parser = Parser::new(tokens, &mut module);
+    let mut parser = Parser::new(tokens, &mut modul);
     parser.run();
-    module.display_ast();
+    modul.display_ast();
 
-    module.report_diagnostics();
+    let mut semantic_analyzer = SemanticAnalyzer::new(&mut modul);
+    semantic_analyzer.run();
+
+    modul.report_diagnostics();
 }
 
 #[derive(clap::Parser)]
