@@ -40,7 +40,7 @@ impl<'sema> TypeChecker<'sema> {
                 name,
                 ty,
                 rhs,
-            } => self.type_check_name_declaration(statement),
+            } => self.check_name_declaration(statement),
             StmtKind::FunctionDeclaration {
                 name,
                 params,
@@ -51,7 +51,7 @@ impl<'sema> TypeChecker<'sema> {
         }
     }
 
-    fn type_check_name_declaration(&mut self, statement: &Stmt) -> TolResult<()> {
+    fn check_name_declaration(&mut self, statement: &Stmt) -> TolResult<()> {
         let StmtKind::NameDeclaration {
             is_mutable,
             name,
@@ -65,14 +65,7 @@ impl<'sema> TypeChecker<'sema> {
         let rhs_ty = self.infer_expression(rhs)?;
 
         match ty {
-            Some(t) => {
-                self.common_type(&rhs_ty, t)
-                    .ok_or(TolDiagnostic::new_error(TolError::InvalidAssignment {
-                        lhs_ty_str: t.to_tol_str(),
-                        rhs_ty_str: rhs_ty.to_tol_str(),
-                        rhs_span: rhs.span().clone().into(),
-                    }))?;
-            }
+            Some(t) => self.check_assignable(t, &rhs_ty, rhs.span().clone())?,
             None => {
                 let id = statement.symbol_id().unwrap();
                 let symbol = self.modul.get_symbol_mut(id).unwrap();
@@ -138,13 +131,7 @@ impl<'sema> TypeChecker<'sema> {
         let lhs_type = self.infer_expression(lhs)?;
         let rhs_type = self.infer_expression(rhs)?;
 
-        self.check_assignment(
-            op,
-            &lhs_type,
-            &rhs_type,
-            lhs.span().clone(),
-            rhs.span().clone(),
-        )?;
+        self.check_assignable(&lhs_type, &rhs_type, rhs.span().clone())?;
 
         Ok(TolType::Wala) // Assignment operation always evaluates to `wala` or void
     }
@@ -164,32 +151,6 @@ impl<'sema> TypeChecker<'sema> {
             lhs.span().clone(),
             rhs.span().clone(),
         )
-    }
-
-    fn check_assignment(
-        &mut self,
-        op: &Token,
-        lhs_type: &TolType,
-        rhs_type: &TolType,
-        lhs_span: Span,
-        rhs_span: Span,
-    ) -> TolResult<()> {
-        if lhs_type == rhs_type {
-            return Ok(());
-        }
-
-        if self.common_type(rhs_type, lhs_type).is_some() {
-            // Optionally insert an ImplicitCast node here.
-            return Ok(());
-        }
-
-        Err(TolDiagnostic::new_error(TolError::InvalidOperandTypes {
-            lhs_ty_str: lhs_type.to_tol_str(),
-            rhs_ty_str: rhs_type.to_tol_str(),
-            operator: op.lexeme().to_string(),
-            lhs_span: lhs_span.into(),
-            rhs_span: rhs_span.into(),
-        }))
     }
 
     fn check_arithmetic_operator(
@@ -225,6 +186,29 @@ impl<'sema> TypeChecker<'sema> {
                 Some(TolType::Lutang)
             }
             _ => None,
+        }
+    }
+
+    fn check_assignable(&self, lhs: &TolType, rhs: &TolType, rhs_span: Span) -> TolResult<()> {
+        if lhs == rhs {
+            return Ok(());
+        }
+
+        match (lhs, rhs) {
+            (TolType::Numero, TolType::Lutang) | (TolType::Lutang, TolType::Numero) => Ok(()),
+            (TolType::DiAlam, _) => Ok(()),
+            (_, TolType::Wala) | (_, TolType::DiAlam) => {
+                Err(TolDiagnostic::new_error(TolError::InvalidAssignment {
+                    lhs_ty_str: lhs.to_tol_str(),
+                    rhs_ty_str: rhs.to_tol_str(),
+                    rhs_span: rhs_span.into(),
+                }))
+            }
+            _ => Err(TolDiagnostic::new_error(TolError::InvalidAssignment {
+                lhs_ty_str: lhs.to_tol_str(),
+                rhs_ty_str: rhs.to_tol_str(),
+                rhs_span: rhs_span.into(),
+            })),
         }
     }
 }
