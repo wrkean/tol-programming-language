@@ -27,13 +27,15 @@ impl<'sema> TypeChecker<'sema> {
         let mut ast = self.modul.take_ast();
 
         for statement in ast.iter() {
-            if let Err(diag) = self.type_check_statement(statement) {
+            if let Err(diag) = self.check_statement(statement) {
                 self.modul.add_diagnostic(diag);
             };
         }
+
+        self.modul.set_ast(ast);
     }
 
-    fn type_check_statement(&mut self, statement: &Stmt) -> TolResult<()> {
+    fn check_statement(&mut self, statement: &Stmt) -> TolResult<()> {
         match statement.kind() {
             StmtKind::NameDeclaration {
                 is_mutable,
@@ -133,6 +135,12 @@ impl<'sema> TypeChecker<'sema> {
 
         self.check_assignable(&lhs_type, &rhs_type, rhs.span().clone())?;
 
+        let left_symbol_id = lhs.symbol_id().unwrap();
+        let left_symbol = self.modul.get_symbol_mut(left_symbol_id).unwrap();
+        if left_symbol.ty().is_none() {
+            left_symbol.set_type(rhs_type.clone());
+        }
+
         Ok(TolType::Wala) // Assignment operation always evaluates to `wala` or void
     }
 
@@ -144,34 +152,13 @@ impl<'sema> TypeChecker<'sema> {
         let lhs_type = self.infer_expression(lhs)?;
         let rhs_type = self.infer_expression(rhs)?;
 
-        self.check_arithmetic_operator(
-            op,
-            &lhs_type,
-            &rhs_type,
-            lhs.span().clone(),
-            rhs.span().clone(),
-        )
-    }
-
-    fn check_arithmetic_operator(
-        &self,
-        op: &Token,
-        lhs_type: &TolType,
-        rhs_type: &TolType,
-        lhs_span: Span,
-        rhs_span: Span,
-    ) -> TolResult<TolType> {
-        if lhs_type == rhs_type {
-            return Ok(lhs_type.clone());
-        }
-
-        self.common_type(lhs_type, rhs_type)
+        self.common_type(&lhs_type, &rhs_type)
             .ok_or(TolDiagnostic::new_error(TolError::InvalidOperandTypes {
                 lhs_ty_str: lhs_type.to_tol_str(),
                 rhs_ty_str: rhs_type.to_tol_str(),
                 operator: op.lexeme().to_string(),
-                lhs_span: lhs_span.into(),
-                rhs_span: rhs_span.into(),
+                lhs_span: lhs.span().clone().into(),
+                rhs_span: rhs.span().clone().into(),
             }))
     }
 
@@ -197,13 +184,6 @@ impl<'sema> TypeChecker<'sema> {
         match (lhs, rhs) {
             (TolType::Numero, TolType::Lutang) | (TolType::Lutang, TolType::Numero) => Ok(()),
             (TolType::DiAlam, _) => Ok(()),
-            (_, TolType::Wala) | (_, TolType::DiAlam) => {
-                Err(TolDiagnostic::new_error(TolError::InvalidAssignment {
-                    lhs_ty_str: lhs.to_tol_str(),
-                    rhs_ty_str: rhs.to_tol_str(),
-                    rhs_span: rhs_span.into(),
-                }))
-            }
             _ => Err(TolDiagnostic::new_error(TolError::InvalidAssignment {
                 lhs_ty_str: lhs.to_tol_str(),
                 rhs_ty_str: rhs.to_tol_str(),
