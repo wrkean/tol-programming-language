@@ -14,6 +14,7 @@ use crate::{
 pub struct NameResolver<'sema> {
     analyzer_ctx: &'sema mut AnalyzerCtx,
     modul: &'sema mut Module,
+    had_error: bool,
 }
 
 impl<'sema> NameResolver<'sema> {
@@ -21,18 +22,23 @@ impl<'sema> NameResolver<'sema> {
         Self {
             analyzer_ctx,
             modul,
+            had_error: false,
         }
     }
 
-    pub fn run(&mut self) {
+    /// Runs the name resolver, returns true if an error occured during the time that it runs
+    pub fn run(&mut self) -> bool {
         let mut ast = self.modul.take_ast(); // Temporary ownership
         for statement in ast.iter_mut() {
             if let Err(diag) = self.resolve_statement(statement) {
                 self.modul.add_diagnostic(diag);
+                self.had_error = true;
             };
         }
 
         self.modul.set_ast(ast);
+
+        self.had_error
     }
 
     fn resolve_statement(&mut self, statement: &mut Stmt) -> TolResult<()> {
@@ -61,6 +67,7 @@ impl<'sema> NameResolver<'sema> {
                 // NOTE: Does not propagate immediately, proceeds to rhs
                 if let Err(diag) = self.resolve_expression(lhs) {
                     self.modul.add_diagnostic(diag);
+                    self.had_error = true;
                 }
 
                 self.resolve_expression(rhs)
@@ -70,6 +77,7 @@ impl<'sema> NameResolver<'sema> {
                 for statement in statements {
                     if let Err(diag) = self.resolve_statement(statement) {
                         self.modul.add_diagnostic(diag);
+                        self.had_error = true;
                     }
                 }
 
@@ -110,6 +118,7 @@ impl<'sema> NameResolver<'sema> {
             // NOTE: Does not propagate immediately
             if let Err(diag) = self.declare_symbol(symbol) {
                 self.modul.add_diagnostic(diag);
+                self.had_error = true;
             }
         }
 

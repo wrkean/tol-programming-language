@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use clap::Parser;
 use miette::SourceSpan;
 
@@ -17,16 +15,12 @@ use crate::{
 };
 
 pub struct TypeChecker<'sema> {
-    analyzer_ctx: &'sema mut AnalyzerCtx,
     modul: &'sema mut Module,
 }
 
 impl<'sema> TypeChecker<'sema> {
-    pub fn new(analyzer_ctx: &'sema mut AnalyzerCtx, modul: &'sema mut Module) -> Self {
-        Self {
-            analyzer_ctx,
-            modul,
-        }
+    pub fn new(modul: &'sema mut Module) -> Self {
+        Self { modul }
     }
 
     pub fn run(&mut self) {
@@ -94,28 +88,24 @@ impl<'sema> TypeChecker<'sema> {
         match expression.kind() {
             ExprKind::Integer(_) => Ok(TolType::Numero),
             ExprKind::Float(token) => Ok(TolType::Lutang),
-            ExprKind::Identifier(token) => {
-                self.infer_identifier(token.lexeme(), token.span().clone())
-            }
+            ExprKind::Identifier(token) => self.infer_identifier(expression),
             ExprKind::Binary { .. } => self.infer_binary(expression),
             ExprKind::Block { statements } => todo!(),
         }
     }
 
-    fn infer_identifier(&mut self, name: &str, span: Span) -> TolResult<TolType> {
-        match self.analyzer_ctx.lookup_symbol(name) {
-            Some(id) => {
-                let symbol = self.modul.get_symbol(id).unwrap();
-                match symbol.ty() {
-                    Some(ty) => Ok(ty),
-                    None => Err(TolDiagnostic::new_error(TolError::UnableToInferType {
-                        span: span.into(),
-                    })),
-                }
-            }
-            None => Err(TolDiagnostic::new_error(
-                TolError::UnableToInferTypeUndeclared { span: span.into() },
-            )),
+    fn infer_identifier(&mut self, identifier: &Expr) -> TolResult<TolType> {
+        let ExprKind::Identifier(token) = identifier.kind() else {
+            unreachable!()
+        };
+
+        let id = identifier.symbol_id().unwrap();
+        let symbol = self.modul.get_symbol(id).unwrap();
+        match symbol.ty() {
+            Some(ty) => Ok(ty),
+            None => Err(TolDiagnostic::new_error(TolError::UnableToInferType {
+                span: token.span().clone().into(),
+            })),
         }
     }
 

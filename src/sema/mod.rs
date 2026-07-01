@@ -22,17 +22,21 @@ impl<'m> SemanticAnalyzer<'m> {
     }
 
     pub fn run(&mut self) {
-        self.resolve_names();
+        if self.resolve_names() {
+            // Stop the pass if an error occured upon resolving names so the type checker can work properly
+            return;
+        };
+
         self.type_check();
     }
 
-    fn resolve_names(&mut self) {
+    fn resolve_names(&mut self) -> bool {
         let mut resolver = NameResolver::new(&mut self.analyzer_ctx, self.modul);
-        resolver.run();
+        resolver.run()
     }
 
     fn type_check(&mut self) {
-        let mut type_checker = TypeChecker::new(&mut self.analyzer_ctx, self.modul);
+        let mut type_checker = TypeChecker::new(self.modul);
         type_checker.run();
     }
 }

@@ -41,6 +41,10 @@ impl Expr {
     pub fn set_symbol_id(&mut self, id: usize) {
         self.symbol_id = Some(id);
     }
+
+    pub fn symbol_id(&self) -> Option<usize> {
+        self.symbol_id
+    }
 }
 
 #[derive(Debug)]
