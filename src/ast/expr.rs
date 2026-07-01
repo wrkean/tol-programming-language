@@ -6,17 +6,23 @@ use crate::{ast::stmt::Stmt, prelude::Span, token::Token};
 pub struct Expr {
     kind: ExprKind,
     span: Span,
+    symbol_id: Option<usize>,
 }
 
 impl Expr {
     pub fn new(kind: ExprKind, span: Span) -> Self {
-        Self { kind, span }
+        Self {
+            kind,
+            span,
+            symbol_id: None,
+        }
     }
 
     pub fn new_block(span: Span, statements: Vec<Stmt>) -> Self {
         Self {
             kind: ExprKind::Block { statements },
             span,
+            symbol_id: None,
         }
     }
 
@@ -26,6 +32,14 @@ impl Expr {
 
     pub fn kind(&self) -> &ExprKind {
         &self.kind
+    }
+
+    pub fn kind_mut(&mut self) -> &mut ExprKind {
+        &mut self.kind
+    }
+
+    pub fn set_symbol_id(&mut self, id: usize) {
+        self.symbol_id = Some(id);
     }
 }
 

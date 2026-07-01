@@ -11,6 +11,7 @@ use crate::{
 pub struct Stmt {
     kind: StmtKind,
     span: Span,
+    symbol_id: Option<usize>,
 }
 
 impl Stmt {
@@ -29,6 +30,7 @@ impl Stmt {
                 rhs,
             },
             span,
+            symbol_id: None,
         }
     }
 
@@ -36,6 +38,7 @@ impl Stmt {
         Self {
             kind: StmtKind::Expression { expr },
             span,
+            symbol_id: None,
         }
     }
 
@@ -54,11 +57,20 @@ impl Stmt {
                 block,
             },
             span,
+            symbol_id: None,
         }
     }
 
     pub fn kind(&self) -> &StmtKind {
         &self.kind
+    }
+
+    pub fn kind_mut(&mut self) -> &mut StmtKind {
+        &mut self.kind
+    }
+
+    pub fn set_symbol_id(&mut self, id: usize) {
+        self.symbol_id = Some(id)
     }
 }
 

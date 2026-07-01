@@ -25,8 +25,8 @@ impl<'sema> NameResolver<'sema> {
     }
 
     pub fn run(&mut self) {
-        let ast = self.modul.take_ast(); // Temporary ownership
-        for statement in ast.iter() {
+        let mut ast = self.modul.take_ast(); // Temporary ownership
+        for statement in ast.iter_mut() {
             if let Err(diag) = self.resolve_statement(statement) {
                 self.modul.add_diagnostic(diag);
             };
@@ -35,30 +35,23 @@ impl<'sema> NameResolver<'sema> {
         self.modul.set_ast(ast);
     }
 
-    fn resolve_statement(&mut self, statement: &Stmt) -> TolResult<()> {
-        match statement.kind() {
-            StmtKind::NameDeclaration {
-                is_mutable,
-                name,
-                ty,
-                rhs,
-            } => self.resolve_name_declaration(statement),
-            StmtKind::FunctionDeclaration {
-                name,
-                params,
-                ret_ty,
-                block,
-            } => self.resolve_par(statement),
+    fn resolve_statement(&mut self, statement: &mut Stmt) -> TolResult<()> {
+        match statement.kind_mut() {
+            StmtKind::NameDeclaration { .. } => self.resolve_name_declaration(statement),
+            StmtKind::FunctionDeclaration { .. } => self.resolve_par(statement),
             StmtKind::Expression { expr } => self.resolve_expression(expr),
         }
     }
 
-    fn resolve_expression(&mut self, expression: &Expr) -> TolResult<()> {
-        match expression.kind() {
+    fn resolve_expression(&mut self, expression: &mut Expr) -> TolResult<()> {
+        match expression.kind_mut() {
             ExprKind::Integer(token) => Ok(()),
             ExprKind::Float(token) => Ok(()),
             ExprKind::Identifier(token) => match self.analyzer_ctx.lookup_symbol(token.lexeme()) {
-                Some(_) => Ok(()),
+                Some(id) => {
+                    expression.set_symbol_id(id);
+                    Ok(())
+                }
                 None => Err(TolDiagnostic::new_error(TolError::UseOfUndeclaredName {
                     name: token.lexeme().to_string(),
                     span: token.span().clone().into(),
@@ -85,13 +78,13 @@ impl<'sema> NameResolver<'sema> {
         }
     }
 
-    fn resolve_par(&mut self, par: &Stmt) -> TolResult<()> {
+    fn resolve_par(&mut self, par: &mut Stmt) -> TolResult<()> {
         let StmtKind::FunctionDeclaration {
             name,
             params,
             ret_ty,
             block,
-        } = par.kind()
+        } = par.kind_mut()
         else {
             unreachable!()
         };
@@ -103,7 +96,7 @@ impl<'sema> NameResolver<'sema> {
             params.span().clone(),
             ret_ty.clone().unwrap_or(TolType::Wala),
         );
-        self.declare_symbol(symbol)?;
+        let id = self.declare_symbol(symbol)?;
 
         self.analyzer_ctx.enter_scope(); // Enter params scope
         for param in params.item() {
@@ -126,16 +119,18 @@ impl<'sema> NameResolver<'sema> {
         self.analyzer_ctx.exit_scope(); // Exit from block scope
         self.analyzer_ctx.exit_scope(); // Exit from params scope
 
+        par.set_symbol_id(id);
+
         Ok(())
     }
 
-    fn resolve_name_declaration(&mut self, name_declaration: &Stmt) -> TolResult<()> {
+    fn resolve_name_declaration(&mut self, name_declaration: &mut Stmt) -> TolResult<()> {
         let StmtKind::NameDeclaration {
             is_mutable,
             name,
             ty,
             rhs,
-        } = name_declaration.kind()
+        } = name_declaration.kind_mut()
         else {
             unreachable!()
         };
@@ -147,11 +142,14 @@ impl<'sema> NameResolver<'sema> {
             ty.clone(),
         );
 
-        self.declare_symbol(symbol)?;
-        self.resolve_expression(rhs)
+        let id = self.declare_symbol(symbol)?;
+        self.resolve_expression(rhs)?;
+        name_declaration.set_symbol_id(id);
+
+        Ok(())
     }
 
-    fn declare_symbol(&mut self, symbol: Symbol) -> TolResult<()> {
+    fn declare_symbol(&mut self, symbol: Symbol) -> TolResult<usize> {
         match self.analyzer_ctx.lookup_current_scope(symbol.name()) {
             Some(id) => {
                 let declared_symbol = self.modul.get_symbol(id).unwrap();
@@ -168,7 +166,7 @@ impl<'sema> NameResolver<'sema> {
                 let id = self.modul.add_symbol(symbol);
                 self.analyzer_ctx.add_symbol_id(name, id);
 
-                Ok(())
+                Ok(id)
             }
         }
     }
