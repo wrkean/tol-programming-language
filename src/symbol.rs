@@ -74,6 +74,10 @@ impl Symbol {
     pub fn name(&self) -> &str {
         &self.name
     }
+
+    pub fn kind(&self) -> &SymbolKind {
+        &self.kind
+    }
 }
 
 #[derive(Debug)]

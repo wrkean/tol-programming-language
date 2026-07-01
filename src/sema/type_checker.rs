@@ -10,6 +10,7 @@ use crate::{
     module::Module,
     prelude::{Span, TolResult},
     sema::analyzer_ctx::AnalyzerCtx,
+    symbol::SymbolKind,
     token::{Token, TokenKind},
     toltype::TolType,
 };
@@ -122,11 +123,17 @@ impl<'sema> TypeChecker<'sema> {
 
         let id = identifier.symbol_id().unwrap();
         let symbol = self.modul.get_symbol(id).unwrap();
-        match symbol.ty() {
-            Some(ty) => Ok(ty),
-            None => Err(TolDiagnostic::new_error(TolError::UnableToInferType {
-                span: token.span().clone().into(),
-            })),
+        match symbol.kind() {
+            SymbolKind::Name { declared_type, .. } => match declared_type {
+                Some(ty) => Ok(ty.clone()),
+                None => Err(TolDiagnostic::new_error(TolError::UnableToInferType {
+                    span: token.span().clone().into(),
+                })),
+            },
+
+            SymbolKind::Function { .. } => {
+                panic!("Hindi pa sinusuportahan ng tol ang first-class functions")
+            }
         }
     }
 
