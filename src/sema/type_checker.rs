@@ -48,18 +48,21 @@ impl<'sema> TypeChecker<'sema> {
                 params,
                 ret_ty,
                 block,
-            } => todo!(),
-            StmtKind::Expression { expr } => todo!(),
+            } => self.check_par(statement),
+            StmtKind::Expression { expr } => {
+                self.infer_expression(expr)?;
+                Ok(())
+            }
         }
     }
 
-    fn check_name_declaration(&mut self, statement: &Stmt) -> TolResult<()> {
+    fn check_name_declaration(&mut self, name_declaration: &Stmt) -> TolResult<()> {
         let StmtKind::NameDeclaration {
             is_mutable,
             name,
             ty,
             rhs,
-        } = statement.kind()
+        } = name_declaration.kind()
         else {
             unreachable!()
         };
@@ -69,11 +72,27 @@ impl<'sema> TypeChecker<'sema> {
         match ty {
             Some(t) => self.check_assignable(t, &rhs_ty, rhs.span().clone())?,
             None => {
-                let id = statement.symbol_id().unwrap();
+                let id = name_declaration.symbol_id().unwrap();
                 let symbol = self.modul.get_symbol_mut(id).unwrap();
                 symbol.set_type(rhs_ty);
             }
         }
+
+        Ok(())
+    }
+
+    fn check_par(&mut self, par: &Stmt) -> TolResult<()> {
+        let StmtKind::FunctionDeclaration {
+            name,
+            params,
+            ret_ty,
+            block,
+        } = par.kind()
+        else {
+            unreachable!()
+        };
+
+        self.infer_expression(block)?;
 
         Ok(())
     }
@@ -84,7 +103,15 @@ impl<'sema> TypeChecker<'sema> {
             ExprKind::Float(token) => Ok(TolType::Lutang),
             ExprKind::Identifier(token) => self.infer_identifier(expression),
             ExprKind::Binary { .. } => self.infer_binary(expression),
-            ExprKind::Block { statements } => todo!(),
+            ExprKind::Block { statements } => {
+                for statement in statements {
+                    if let Err(diag) = self.check_statement(statement) {
+                        self.modul.add_diagnostic(diag);
+                    }
+                }
+
+                Ok(TolType::Wala) // WARN: Temporary
+            }
         }
     }
 
